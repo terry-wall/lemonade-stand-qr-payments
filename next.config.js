@@ -3,24 +3,18 @@ const nextConfig = {
   // Use standalone output for deployment
   output: 'standalone',
   
-  // Force dynamic rendering for all routes to avoid prerender errors
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, max-age=0, must-revalidate',
-          },
-        ],
-      },
-    ]
-  },
-  
+  // Disable static optimization to avoid prerender errors
   experimental: {
     outputFileTracingRoot: process.cwd(),
   },
+  
+  // Configure trailing slash behavior
+  trailingSlash: false,
+  
+  // Configure generateStaticParams for dynamic routes
+  async generateStaticParams() {
+    return []
+  }
 }
 
 module.exports = nextConfig

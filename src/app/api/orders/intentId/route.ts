@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOrder } from '@/lib/database'
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { intentId: string } }
+  context: { params: { intentId: string } }
 ) {
   try {
+    // Handle the case where params might be a Promise in newer Next.js versions
+    const params = await Promise.resolve(context.params)
     const { intentId } = params
     
     if (!intentId) {
