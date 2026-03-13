@@ -1,13 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use standalone output for better deployment
+  // Use standalone output for deployment
   output: 'standalone',
   
-  // Cache control headers for API routes
+  // Force dynamic rendering for all routes to avoid prerender errors
   async headers() {
     return [
       {
-        source: '/api/:path*',
+        source: '/:path*',
         headers: [
           {
             key: 'Cache-Control',
@@ -18,12 +18,6 @@ const nextConfig = {
     ]
   },
   
-  // Ensure we skip non-existent pages during static generation
-  async generateStaticParams() {
-    return []
-  },
-  
-  // Explicitly disable static optimization for dynamic routes
   experimental: {
     outputFileTracingRoot: process.cwd(),
   },
