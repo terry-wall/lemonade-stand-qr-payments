@@ -1,11 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
-  // Disable static optimization for dynamic routes
-  trailingSlash: false,
-  // Force dynamic rendering for API routes
+  // Use standalone output for better deployment
+  output: 'standalone',
+  
+  // Cache control headers for API routes
   async headers() {
     return [
       {
@@ -19,16 +17,15 @@ const nextConfig = {
       },
     ]
   },
-  // Ensure static generation doesn't fail on missing routes
+  
+  // Ensure we skip non-existent pages during static generation
   async generateStaticParams() {
     return []
   },
-  // Export configuration for static generation
-  output: 'standalone',
-  // Disable static export for routes that use server features
+  
+  // Explicitly disable static optimization for dynamic routes
   experimental: {
-    appDir: true,
-    outputFileTracingRoot: undefined,
+    outputFileTracingRoot: process.cwd(),
   },
 }
 

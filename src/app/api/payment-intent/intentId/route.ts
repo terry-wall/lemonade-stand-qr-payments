@@ -5,15 +5,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 })
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { intentId: string } }
+  context: { params: { intentId: string } }
 ) {
   try {
+    // Safely extract intentId with proper error checking
+    const params = context?.params
+    if (!params || !params.intentId) {
+      console.error('Missing params or intentId in route context')
+      return NextResponse.json({ error: 'Missing intent ID' }, { status: 400 })
+    }
+
     const { intentId } = params
     
-    if (!intentId) {
-      return NextResponse.json({ error: 'Missing intent ID' }, { status: 400 })
+    if (!intentId || typeof intentId !== 'string') {
+      console.error('Invalid intentId:', intentId)
+      return NextResponse.json({ error: 'Invalid intent ID' }, { status: 400 })
     }
 
     const paymentIntent = await stripe.paymentIntents.retrieve(intentId)
