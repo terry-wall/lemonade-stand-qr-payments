@@ -16,7 +16,8 @@
     "qrcode": "^1.5.3",
     "sqlite3": "^5.1.6",
     "@stripe/stripe-js": "latest",
-    "next-auth": "^4.24.5"
+    "next-auth": "^4.24.5",
+    "lucide-react": "^0.263.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
