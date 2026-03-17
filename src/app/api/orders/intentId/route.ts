@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOrder } from '@/lib/database'
+import { prisma } from '@/lib/prisma'
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
@@ -17,13 +17,25 @@ export async function GET(
       return NextResponse.json({ error: 'Missing intent ID' }, { status: 400 })
     }
 
-    const order = await getOrder(intentId)
+    const order = await prisma.order.findUnique({
+      where: {
+        paymentIntentId: intentId,
+      },
+    })
     
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    return NextResponse.json(order)
+    return NextResponse.json({
+      id: order.id,
+      paymentIntentId: order.paymentIntentId,
+      items: order.items,
+      amount: order.amount,
+      status: order.status,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    })
   } catch (error: any) {
     console.error('Error fetching order:', error)
     return NextResponse.json(

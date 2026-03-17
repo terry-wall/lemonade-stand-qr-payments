@@ -11,7 +11,7 @@ export interface CartItem extends MenuItem {
 }
 
 export interface Order {
-  id: number
+  id: string
   paymentIntentId: string
   items: CartItem[]
   amount: number

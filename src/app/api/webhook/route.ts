@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { updateOrderStatus } from '@/lib/database'
+import { prisma } from '@/lib/prisma'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -26,13 +26,27 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await updateOrderStatus(paymentIntent.id, 'completed')
+        await prisma.order.update({
+          where: {
+            paymentIntentId: paymentIntent.id,
+          },
+          data: {
+            status: 'completed',
+          },
+        })
         console.log('Payment succeeded for:', paymentIntent.id)
         break
       
       case 'payment_intent.payment_failed':
         const failedPayment = event.data.object as Stripe.PaymentIntent
-        await updateOrderStatus(failedPayment.id, 'failed')
+        await prisma.order.update({
+          where: {
+            paymentIntentId: failedPayment.id,
+          },
+          data: {
+            status: 'failed',
+          },
+        })
         console.log('Payment failed for:', failedPayment.id)
         break
       

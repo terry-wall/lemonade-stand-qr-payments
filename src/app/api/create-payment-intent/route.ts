@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { saveOrder } from '@/lib/database'
+import { prisma } from '@/lib/prisma'
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic'
@@ -36,11 +36,13 @@ export async function POST(request: NextRequest) {
     })
 
     // Save order to database
-    await saveOrder({
-      paymentIntentId: paymentIntent.id,
-      items,
-      amount,
-      status: 'pending',
+    await prisma.order.create({
+      data: {
+        paymentIntentId: paymentIntent.id,
+        items,
+        amount,
+        status: 'pending',
+      },
     })
 
     return NextResponse.json({
