@@ -1,6 +1,7 @@
 FROM node:22-slim AS builder
+ENV DEBIAN_FRONTEND=noninteractive
 RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true) && \
-    apt-get update && apt-get install -y --no-install-recommends dumb-init openssl && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NEXT_PRIVATE_SKIP_TYPECHECKING=1
 COPY package*.json ./
@@ -9,8 +10,9 @@ COPY . .
 RUN npm run build
 
 FROM node:22-slim
+ENV DEBIAN_FRONTEND=noninteractive
 RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true) && \
-    apt-get update && apt-get install -y --no-install-recommends dumb-init && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=builder /app .  
 ENV PORT=3000
