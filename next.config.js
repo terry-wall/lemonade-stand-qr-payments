@@ -14,10 +14,6 @@ const nextConfig = {
   
   eslint: {
     ignoreDuringBuilds: true,
-  },
-  
-  async generateStaticParams() {
-    return []
   }
 }
 
