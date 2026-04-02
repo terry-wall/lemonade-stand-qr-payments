@@ -1,21 +1,31 @@
 FROM node:22-slim AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true) && \
-    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init openssl && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init libssl3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NEXT_PRIVATE_SKIP_TYPECHECKING=1
 COPY package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY . .
+RUN npx prisma generate
 RUN npm run build
 
 FROM node:22-slim
 ENV DEBIAN_FRONTEND=noninteractive
 RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true) && \
-    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init && rm -rf /var/lib/apt/lists/*
+    apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init libssl3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /app .  
-ENV PORT=3000
+# Copy standalone output (NOT the entire /app)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+# Copy Prisma runtime files (engine + schema)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/prisma ./prisma
+ENV PORT=3000 NODE_ENV=production HOSTNAME=0.0.0.0
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD node -e "fetch('http://localhost:3000/').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"
-CMD ["sh", "-c", "npm run start"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "require('net').connect(3000,()=>process.exit(0)).on('error',()=>process.exit(1))"
+# Apply database schema then start server
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss && node server.js"]
