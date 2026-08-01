@@ -3,11 +3,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/statoverride || true) && \
     apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init libssl3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-ENV NEXT_PRIVATE_SKIP_TYPECHECKING=1
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
-RUN npx prisma generate
 COPY . .
 RUN npm run build
 
@@ -17,16 +15,20 @@ RUN (test -f /var/lib/dpkg/statoverride && sed -i '/messagebus/d' /var/lib/dpkg/
     apt-get update && apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" dumb-init libssl3 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Copy standalone output
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-# Copy Prisma runtime files (engine + schema)
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+# Copy Prisma runtime files (engine + schema + migrations)
+COPY --from=builder --chown=node:node /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=node:node /app/prisma ./prisma
 ENV PORT=3000 NODE_ENV=production HOSTNAME=0.0.0.0
+USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD node -e "require('net').connect(3000,()=>process.exit(0)).on('error',()=>process.exit(1))"
-# Apply database schema then start server
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate --accept-data-loss && node server.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:'+process.env.PORT+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+ENTRYPOINT ["dumb-init", "--"]
+# Apply pending migrations, then start. `migrate deploy` only replays committed
+# migrations — unlike `db push --accept-data-loss`, it will never drop a column.
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]

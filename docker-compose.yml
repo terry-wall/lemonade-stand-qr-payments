@@ -6,8 +6,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lemonade_stand
+    # Bound to loopback so a dev database is not exposed on the LAN.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,11 +22,13 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/lemonade_stand
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    # Stripe keys come from .env; these two override whatever is in there so
+    # the app always points at the compose database.
     env_file:
       - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/lemonade_stand
+      APP_URL: ${APP_URL:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy

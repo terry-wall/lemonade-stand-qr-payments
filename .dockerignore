@@ -2,7 +2,10 @@ node_modules
 .next
 .git
 .gitignore
-.env*.local
+# Never bake real secrets into the image; runtime env supplies them.
+.env
+.env.*
+!.env.example
 *.md
 .vscode
 .idea

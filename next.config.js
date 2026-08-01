@@ -1,20 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  
-  experimental: {
-    outputFileTracingRoot: process.cwd(),
-  },
-  
+
+  // Moved out of `experimental` in Next 15; it was being silently ignored here.
+  outputFileTracingRoot: process.cwd(),
+
   trailingSlash: false,
-  
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
-  eslint: {
-    ignoreDuringBuilds: true,
-  }
 }
 
 module.exports = nextConfig

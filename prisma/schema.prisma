@@ -9,13 +9,17 @@ datasource db {
 }
 
 model Order {
-  id               String   @id @default(cuid())
-  paymentIntentId  String   @unique
-  items            Json
-  amount           Float
-  status           String   @default("pending")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(cuid())
+  checkoutSessionId String   @unique
+  /// Priced order lines: [{ id, name, quantity, unitPriceCents }]
+  items             Json
+  /// Order total in cents. Integer, never a float.
+  amountCents       Int
+  /// One of: pending | completed | failed | expired
+  status            String   @default("pending")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
+  @@index([status, createdAt])
   @@map("orders")
 }
