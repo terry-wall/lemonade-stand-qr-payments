@@ -8,6 +8,10 @@ COPY prisma ./prisma/
 RUN npm ci
 COPY . .
 RUN npm run build
+# Fail here rather than shipping an image that crash-loops at startup: the
+# runtime stage copies these two binaries and cannot download replacements.
+RUN test -x node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x && \
+    test -f node_modules/@prisma/engines/libquery_engine-debian-openssl-3.0.x.so.node
 
 FROM node:22-slim
 ENV DEBIAN_FRONTEND=noninteractive
@@ -24,6 +28,16 @@ COPY --from=builder --chown=node:node /app/node_modules/@prisma ./node_modules/@
 COPY --from=builder --chown=node:node /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 ENV PORT=3000 NODE_ENV=production HOSTNAME=0.0.0.0
+# Guarantee the engine directory exists and belongs to the runtime user. COPY
+# --chown only covers copied content, so a differently-built tree can leave this
+# root-owned and Prisma then fails with "Can't write to .../@prisma/engines".
+RUN mkdir -p /app/node_modules/@prisma/engines && \
+    chown -R node:node /app/node_modules/@prisma /app/node_modules/.prisma
+# Point Prisma at the engines copied above. Without these it probes for them and
+# falls back to downloading into node_modules, which fails as non-root with
+# "Can't write to /app/node_modules/@prisma/engines".
+ENV PRISMA_SCHEMA_ENGINE_BINARY=/app/node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x \
+    PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/@prisma/engines/libquery_engine-debian-openssl-3.0.x.so.node
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
